@@ -1,0 +1,25 @@
+import yfinance as yf
+import statsmodels.api as sm
+from datetime import timedelta
+from datetime import datetime
+
+ativos = ['WEGE3.SA', '^BVSP']
+data = datetime.now()
+tres_anos_atras = data - timedelta(days = 1095)
+dados_cotacoes = yf.download(ticker = ativos, start =  tres_anos_atras, end = data)['Adj Close']
+
+dados_cotacoes
+
+
+retornos_diarios = dados_cotacoes.pct_change().dropna()
+retornos_diarios
+
+X = retornos_diarios['^BVSP']
+Y = retornos_diarios[ativos[0]]
+X = sm.add_constant(X)
+model =  sm.OLS(Y, X).fit()
+
+print(model.params[1])
+print(model.rsquared)
+print('---------------------------')
+print(str(model.summary()))
