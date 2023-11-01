@@ -1,0 +1,37 @@
+import pandas as pd
+from selenium import webdriver
+from selenium.webdriver.edge.service import Service as EdgeService
+from webdriver_manager.microsoft import EdgeChromiumDriverManager
+
+driver = webdriver.Edge(service=EdgeService(EdgeChromiumDriverManager().install()))
+
+url = 'https://www.fundamentus.com.br/'
+driver.get(url)
+
+local_table = '/html/body/div[1]/div[2]/table'
+elemento = driver.find_element('xpath', local_table)
+html_tabela = elemento.get_attribute ('outerHTML')
+tabela = pd.read_html(str(html_tabela), thousands = '.', decimal = ',')[0]
+tabela
+
+tabela = tabela.set_index('Papel')
+
+tabela = tabela [['Cotação', 'EV/EBIT', 'ROIC', 'Liq.2meses']]
+tabela
+
+tabela['ROIC'] = tabela ['ROIC'].str.replace('%', '')
+tabela['ROIC'] = tabela ['ROIC'].str.replace('.', '')
+tabela['ROIC'] = tabela ['ROIC'].str.replace(',', '.')
+tabela['ROIC'] = tabela ['ROIC'].astype(float)
+tabela
+
+tabela = tabela[tabela['Liq.2meses'] > 1000000]
+
+tabela = tabela[tabela['EV/EBIT'] > 0]
+tabela = tabela[tabela['ROIC'] > 0]
+
+tabela['ranking_ev_ebit'] = tabela['EV/Ebit'].rank(ascending = True)
+tabela['ranking_roic'] = tabela['ROIC'].rank(ascending = False)
+tabela['ranking_total'] = tabela['ranking_ev_ebit'] + tabela['ranking_roic']
+tabela = tabela.sort_values('ranking_total')
+tabela
