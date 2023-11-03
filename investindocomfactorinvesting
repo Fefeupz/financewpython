@@ -1,0 +1,39 @@
+import pandas as pd
+import quantstats as qs
+import datetime import datetime
+
+dados_empresas = pd.read_csv('dados_empresas.csv')
+
+dados_empresas = dados_empresas[dados_empresas['volume_negociado'] > 1000000]
+dados_empresas['retorno'] = dados_empresas.groupby('ticker')['preco_fechamento_ajustado'].pct_change()
+dados_empresas['retorno'] = dados_empresas['retorno'].shift(-1)
+
+dados_empresas['ranking_ebit_ev'] = dados_empresas.groupby('data')['ebit_ev'].rank(ascending = False)
+dados_empresas['ranking_roic'] = dados_empresas.groupby('data')['roic'].rank(ascending = False)
+dados_empresas[dados_empresas['data'] == '2016-12-31']
+
+dados_empresas ['ranking_final'] = dados_empresas['ranking_ebit_ev'] + dados_empresas['ranking_roic']
+dados_empresas ['ranking_final'] = dados_empresas.groupby('data')['ranking_final'].rank()
+dados_empresas = dados_empresas[dados_empresas['ranking_final'] <= 10]
+dados_empresas[dados_empresas['data'] == '2016-12-31']
+
+rentabilidade_por_carteira = dados_empresas.groupby('data')['retorno'].mean()
+rentabilidade_por_carteira = rentabilidade_por_carteira.to_frame()
+rentabilidade_por_carteira['retorno'] = (rentabilidade_por_carteira['retorno'] +1).cumprod() - 1
+rentabilidade_por_carteira['retorno'] = rentabilidade_por_carteira['retorno'].shift(1)
+rentabilidade_por_carteira = rentabilidade_por_carteira.dropna()
+
+ibov = pd.read_csv('ibov.csv')
+retornos_ibov = ibov['fechamento'].pct_change().dropna()
+retornos_ibov = (retornos_ibov + 1).cumprod() - 1
+
+rentabilidade_por_carteira['ibovespa'] = retornos_ibov.values
+
+qs.extend_pandas()
+
+rentabilidade_por_carteira.index = pd.to_datetime(rentabilidade_por_carteira.index)
+rentabilidade_por_carteira ['retorno'].plot_monthly_heatmap()
+rentabilidade_por_carteira['ibovespa'].plot_monthly_heatmap()
+
+rentabilidade_ao_ano = 1 + rentabilidade_por_carteira.loc[datetime(2023, 8, 31, 0, 0, 0), 'retorno']) ** 1/10.66) - 1
+rentabilidade_ao_ano
